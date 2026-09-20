@@ -1,6 +1,6 @@
-# 🌱 Crop Rescue
+#  Crop Rescue
 
-## AI-Powered Crop Disease Detection
+## Crop Disease Detection
 
 Crop Rescue is a tool I'm building to help identify plant diseases from a simple photo of a leaf. Right now it covers three crops — tomato, potato, and maize — and uses a machine learning model I trained to recognize 17 different disease and healthy leaf categories.
 
