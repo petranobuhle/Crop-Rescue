@@ -1,0 +1,1 @@
+"""Local crop information and SQLite persistence."""

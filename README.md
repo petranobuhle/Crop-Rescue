@@ -1,93 +1,82 @@
-#  Crop Rescue
+# Crop Rescue
 
-## Crop Disease Detection
+Crop Rescue is a local-first plant disease screening application for farmers. It combines a trained MobileNetV2 classifier with crop information and local scan history. A model result is a screening aid, not a confirmed agricultural diagnosis.
 
-Crop Rescue is a tool I'm building to help identify plant diseases from a simple photo of a leaf. Right now it covers three crops — tomato, potato, and maize — and uses a machine learning model I trained to recognize 17 different disease and healthy leaf categories.
+## Supported Crops
 
-The idea came from wanting to work on something that actually matters in an African context. A lot of smallholder farmers don't have easy access to agricultural extension officers, and by the time a disease is visibly spreading, it's often too late to do much about it. Crop Rescue is my attempt at putting a basic diagnostic tool in anyone's hands, using just a smartphone photo.
+- Maize
+- Potato
+- Tomato
+- Cassava
+- Beans are shown as **Coming Soon** and are not sent to the model.
 
-This is a student project and a work in progress, not a finished product. I built it as part of my Computer Science studies and as a portfolio piece, but I'm continuing to improve it.
+The supplied `plant_disease_model.h5` has 22 output classes. `class_names.json` is the authoritative output ordering; the application validates the model input and output against that file at diagnosis time. Do not reorder or recreate the class list.
 
----
+## Farmer Flow
 
-## The Problem
+1. Choose a supported crop.
+2. Take a photo or select one from the device.
+3. Review photo-quality warnings and continue when ready.
+4. View the model prediction, confidence status, explanation, and general action guidance.
+5. Save scan details locally and optionally leave feedback.
 
-Crop diseases can spread quickly and cause real damage to yield and income if they aren't caught early. For a lot of farmers, getting a proper diagnosis in time isn't easy — expert help isn't always nearby, and a leaf with early symptoms can look confusingly similar across different diseases.
+The app does not store uploaded images in scan history, automatically retrain, or synchronize data to a server. Feedback remains in a local pending queue.
 
-I wanted to explore whether a trained AI model could offer a first-line diagnosis that's fast, free, and accessible from a phone.
+## Project Structure
 
----
+```text
+app.py                      Streamlit entry point and navigation
+config.py                   Project paths and model configuration
+services/model.py           Lazy cached model loading and shape checks
+services/diagnosis.py       MobileNetV2 preprocessing and inference
+services/image_quality.py   Lightweight Pillow/NumPy image checks
+data/catalog.py             Crop and disease information
+data/database.py            SQLite connection and schema
+data/history.py             Local scan history
+data/feedback.py            Local pending feedback
+ui/layout.py                Cached local assets and shared navigation
+ui/screens.py               Product screens and farmer-facing components
+assets/styles.css           Responsive product styling
+assets/images/              Optional local hero and crop photographs
+data/crop_rescue.db         Created locally at runtime; not committed
+```
 
-## What It Does Right Now
+## Local Images
 
-The current version is a working prototype built with Streamlit. A user can:
+Place optimized JPG files in `assets/images/` named `hero.jpg`, `maize.jpg`, `potato.jpg`, `tomato.jpg`, `cassava.jpg`, and `beans.jpg`. The interface uses designed placeholders for missing images and does not fetch external images at runtime. Image variants are resized and cached in memory. Uploads are limited to 12 MB and decoded images to 16 megapixels to keep memory use bounded.
 
-- Upload a photo of a tomato, potato, or maize leaf
-- Have that photo run through my trained TensorFlow model
-- See the predicted disease (or "healthy") result
-- See the model's confidence score
-- Get a short description of the disease and a basic treatment suggestion
+## Setup
 
-## How It Works
-Leaf photo uploaded
-↓
-Image gets resized and processed
-↓
-Trained TensorFlow model analyzes it
-↓
-Model predicts the disease class
-↓
-Result + confidence score + treatment tip displayed
+Use Python 3.13 and install the minimal dependencies:
 
-
-## How I Built It
-
-I used the PlantVillage dataset, filtered down to just the classes for tomato, potato, and maize (17 categories total, about 24,000 images). Rather than training a model from scratch, I used transfer learning with MobileNetV2 — a model already pretrained on millions of general images — and just trained new layers on top to recognize these specific plant diseases. I did the actual training on Kaggle Notebooks since it gives free GPU access, which made a real difference given my own laptop's limited specs.
-
-Once the model was trained, I saved it and built a Streamlit app around it so anyone could upload a photo and get a result without needing to touch any code.
-
-**Tech stack:**
-- Python
-- TensorFlow / Keras (MobileNetV2, transfer learning)
-- NumPy
-- Pillow (PIL) for image handling
-- Streamlit for the web interface
-- Kaggle Notebooks for training
-- Git & GitHub for version control
-
-## Results
-
-My current model reaches about **81% validation accuracy** across the 17 classes. I think that's a solid first result for a project built in a few weeks, though there's definitely room to improve — especially for diseases that look visually similar to each other.
-
-## Running It Yourself
-
-1. Clone this repo:
-git clone https://github.com/petranobuhle/crop-rescue.git
-2. Move into the project folder:
-cd crop-rescue
-3. Install what you need:
-pip install tensorflow streamlit numpy pillow
-4. Run the app:
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 python -m streamlit run app.py
-5. It should open automatically in your browser at `localhost:8501`.
+```
 
-## Limitations (being upfront about this)
+Open the local URL printed by Streamlit, normally `http://localhost:8501`. On native Windows, TensorFlow runs on CPU; no GPU is required. The model is loaded only after the user continues to diagnosis and is cached for later scans. No training data is loaded and no model is trained locally; training remains in Kaggle.
 
-This is a student prototype, not a certified agricultural diagnostic tool. The prediction can be thrown off by things like poor lighting, cluttered backgrounds, unusual leaf angles, or diseases that look visually similar to each other. It also only knows what it was trained on — a disease outside my 17 categories won't be recognized correctly. I don't want anyone making serious farming decisions based on this alone; it's meant to explore what's possible, not replace real agricultural expertise.
+## Checks
 
-## Where I Want to Take This
+Run the lightweight tests with:
 
-Right now this is just a working prototype. Things I'm hoping to add as I keep developing it:
+```powershell
+python -m unittest discover -s tests -v
+```
 
-- More detailed disease info — symptoms, causes, prevention, not just a one-line tip
-- Support for more crops beyond the current three
-- A severity/recovery outlook per disease, not just a static tip
-- Better evaluation of the model itself (confusion matrix, precision/recall per class, not just overall accuracy)
-- Possibly moving beyond Streamlit into a more complete app if the project grows
+The tests cover class ordering, model shape checks, preprocessing layout, prediction mapping, image checks, catalog coverage, and local history/feedback behavior. The model smoke test uses one synthetic image and does not assess model accuracy.
 
-## About Me
+## Limitations
 
-I'm Petra Nobuhle Mahwadu, a Year 2 Computer Science student at the University of Rwanda. I'm interested in AI, machine learning, and how technology can address real problems in African agriculture and health. Crop Rescue is part of both my portfolio and my own learning process — through building it I've gotten hands-on practice with TensorFlow, image classification, model training and deployment, and building a real (if small) end-to-end application.
+The model only knows its 22 trained classes. Poor lighting, blur, clutter, unseen diseases, or symptoms that resemble one another can affect a prediction. Photo-quality checks are simple heuristics, not scientific measurements. Confidence thresholds are interface rules, not validated accuracy boundaries. Confirm serious or rapidly spreading crop symptoms with local agricultural expertise.
+
+No current validation metric is claimed here for the supplied 22-class model. Model evaluation and any future retraining should be performed in Kaggle, not on the 4 GB development computer.
+
+## About
+
+Crop Rescue began as a student project by Petra Nobuhle Mahwadu, a Year 2 Computer Science student at the University of Rwanda, exploring practical uses of AI in African agriculture.
 
 ## Disclaimer
 
