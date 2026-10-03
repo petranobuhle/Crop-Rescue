@@ -193,3 +193,4 @@ elif st.session_state.view == "history":
 
 elif st.session_state.view == "library":
     render_library(class_names)
+    
