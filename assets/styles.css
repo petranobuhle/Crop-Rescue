@@ -8,7 +8,8 @@
     --gold: #e6b84c;
     --line: #d7e0d7;
     --warning: #8a5010;
-    --field-pressed: #10291f;
+    --field-selected: #2f6246;
+    --field-pressed: #294e36;
     --mint-pressed: #c7d8ca;
 }
 
@@ -289,6 +290,33 @@ div.stButton > button {
 }
 
 [data-testid="stButton"] > button[kind="primary"]:active:not(:disabled) {
+    background-color: var(--field-pressed) !important;
+    border-color: var(--field-pressed) !important;
+    color: white !important;
+}
+
+.st-key-nav_home [data-testid="stButton"] > button[kind="primary"],
+.st-key-nav_diagnose [data-testid="stButton"] > button[kind="primary"],
+.st-key-nav_history [data-testid="stButton"] > button[kind="primary"],
+.st-key-nav_library [data-testid="stButton"] > button[kind="primary"] {
+    background-color: var(--field-selected) !important;
+    border-color: var(--field-selected) !important;
+    color: white !important;
+}
+
+.st-key-nav_home [data-testid="stButton"] > button[kind="primary"]:hover:not(:disabled),
+.st-key-nav_diagnose [data-testid="stButton"] > button[kind="primary"]:hover:not(:disabled),
+.st-key-nav_history [data-testid="stButton"] > button[kind="primary"]:hover:not(:disabled),
+.st-key-nav_library [data-testid="stButton"] > button[kind="primary"]:hover:not(:disabled) {
+    background-color: var(--leaf) !important;
+    border-color: var(--leaf) !important;
+    color: white !important;
+}
+
+.st-key-nav_home [data-testid="stButton"] > button[kind="primary"]:active:not(:disabled),
+.st-key-nav_diagnose [data-testid="stButton"] > button[kind="primary"]:active:not(:disabled),
+.st-key-nav_history [data-testid="stButton"] > button[kind="primary"]:active:not(:disabled),
+.st-key-nav_library [data-testid="stButton"] > button[kind="primary"]:active:not(:disabled) {
     background-color: var(--field-pressed) !important;
     border-color: var(--field-pressed) !important;
     color: white !important;
