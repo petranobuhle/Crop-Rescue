@@ -25,7 +25,7 @@ class DataFeatureTests(unittest.TestCase):
                 "Tomato",
                 "Tomato___Early_blight",
                 0.82,
-                "higher",
+                "high",
                 database_path,
             )
             saved_feedback = save_feedback(

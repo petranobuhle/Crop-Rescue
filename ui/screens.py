@@ -176,33 +176,110 @@ def crop_for_prediction(class_name: str) -> str | None:
     return crop_for_class(class_name)
 
 
+def _result_title(status: str, disease_label: str) -> str:
+    if status == "high":
+        return f"Likely {disease_label}"
+    if status == "moderate":
+        return f"Possible {disease_label}"
+    return "Unable to confidently identify the problem"
+
+
+def _result_message(status: str, disease_label: str) -> str:
+    if status == "high":
+        return (
+            f"This model suggests a likely {disease_label.lower()} pattern. "
+            "It is a field-use alert, not a confirmed diagnosis."
+        )
+    if status == "moderate":
+        return (
+            f"Possible {disease_label.lower()}. Similar symptoms can occur with other crop "
+            "conditions, so a second clear photo or local field check is valuable."
+        )
+    return (
+        "The model is not confident enough to identify a specific problem. "
+        "Retake the photo, improve the lighting, and inspect several leaves before acting."
+    )
+
+
+def _field_context_message(
+    weather: str,
+    soil: str,
+    timing: str,
+    spread: str,
+    result: PredictionResult,
+) -> str:
+    if weather == "Very rainy" or soil == "Very wet":
+        if result.confidence_status == "low":
+            return (
+                "Recent wet conditions may be increasing crop stress. The current image model "
+                "cannot confirm water stress from a photo alone; check soil moisture and inspect nearby plants."
+            )
+        return (
+            "Possible disease detected. Recent heavy or wet conditions may increase the risk of some crop problems. "
+            "Inspect nearby plants and monitor whether symptoms are spreading."
+        )
+    if weather == "Very dry" or soil == "Very dry":
+        if result.confidence_status == "low":
+            return (
+                "Your crop may be experiencing stress. The current AI model cannot confirm water stress from a photo alone. "
+                "Check soil moisture and inspect several plants."
+            )
+        return (
+            "Dry conditions may be contributing to stress symptoms. Keep an eye on the plant and compare with nearby healthy plants."
+        )
+    if spread in {"Several leaves", "Most of the plant", "Several plants"}:
+        return (
+            "Symptoms appear to be spreading beyond a single leaf. Inspect nearby plants and monitor whether the pattern is expanding."
+        )
+    if timing == "More than a week ago":
+        return (
+            "This has been present for more than a week, so comparison with nearby plants and local field checks is important."
+        )
+    return ""
+
+
 def render_result(
     result: PredictionResult,
     selected_crop: str,
     disease_info: DiseaseInfo | None,
+    crop_mismatch: bool = False,
 ) -> bool:
     predicted_crop = crop_for_prediction(result.class_name)
-    display_name = (
+    disease_label = (
         disease_info.disease
         if disease_info
         else result.class_name.split("___", 1)[-1].replace("_", " ")
     )
+    title = _result_title(result.confidence_status, disease_label)
+    summary = _result_message(result.confidence_status, disease_label)
 
-    st.markdown('<p class="eyebrow">AI DIAGNOSIS · MODEL PREDICTION</p>', unsafe_allow_html=True)
-    st.markdown(f'<h1 class="page-title">{display_name}</h1>', unsafe_allow_html=True)
-    st.markdown(f'<p class="result-crop">{predicted_crop or selected_crop}</p>', unsafe_allow_html=True)
-    st.progress(min(max(result.confidence, 0.0), 1.0), text=f"Model confidence · {result.confidence:.1%}")
+    st.markdown('<p class="eyebrow">FIELD ASSESSMENT</p>', unsafe_allow_html=True)
+    st.markdown(f'<h1 class="page-title">{title}</h1>', unsafe_allow_html=True)
+    st.markdown(f'<p class="result-crop">Selected crop: {selected_crop}</p>', unsafe_allow_html=True)
+
+    if result.confidence_status == "high":
+        badge_label = "Likely"
+    elif result.confidence_status == "moderate":
+        badge_label = "Possible"
+    else:
+        badge_label = "Uncertain"
     st.markdown(
         f'<div class="confidence-badge confidence-{result.confidence_status}">'
-        f'{result.confidence_status.title()} confidence</div>',
+        f'{badge_label}</div>',
         unsafe_allow_html=True,
     )
-    if result.confidence_status == "low":
-        st.warning("This result is uncertain. Try another clear photo of the affected leaf.")
-    if predicted_crop and predicted_crop != selected_crop:
+    st.progress(min(max(result.confidence, 0.0), 1.0), text=f"Model confidence · {result.confidence:.1%}")
+    st.write(summary)
+
+    if crop_mismatch:
+        st.error(
+            f"The image does not match the selected crop. You chose {selected_crop}, but the model's top class is for "
+            f"{predicted_crop or 'another crop'}. Please check the crop selection or retake the photo."
+        )
+    elif predicted_crop and predicted_crop != selected_crop:
         st.warning(
-            f"You selected {selected_crop}, but the model's top class is for "
-            f"{predicted_crop}. Check that the crop selection and photo are correct."
+            f"You selected {selected_crop}, but the model's top class is for {predicted_crop}. "
+            "Check that the crop selection and photo are correct."
         )
 
     st.markdown(
@@ -219,9 +296,19 @@ def render_result(
             st.info(disease_info.note)
     else:
         st.write(
-            "No catalog entry is available for this model class. Confirm the "
-            "result with a local agricultural professional."
+            "No catalog entry is available for this model class. Confirm the result with a local agricultural professional."
         )
+
+    with st.expander("Field context check", expanded=True):
+        weather = st.selectbox("What has the weather been like recently?", ("Very rainy", "Normal", "Very dry"), key="weather_context")
+        soil = st.selectbox("How is the soil around the plant?", ("Very wet", "Normal", "Very dry", "Not sure"), key="soil_context")
+        timing = st.selectbox("When did you first notice the problem?", ("Today", "A few days ago", "More than a week ago"), key="timing_context")
+        spread = st.selectbox("How widespread is the problem?", ("One/few leaves", "Several leaves", "Most of the plant", "Several plants"), key="spread_context")
+        context_message = _field_context_message(weather, soil, timing, spread, result)
+        if context_message:
+            st.info(context_message)
+        else:
+            st.caption("Context is noted for review. Use this as guidance, not as a trained prediction.")
 
     st.markdown('<h3 class="subsection-title">What to do now</h3>', unsafe_allow_html=True)
     if disease_info:
@@ -232,14 +319,14 @@ def render_result(
     else:
         st.write("Monitor nearby plants and seek local agricultural guidance.")
     st.caption(
-        "The AI prediction is not a confirmed diagnosis. Agricultural information "
-        "is general guidance, not a treatment prescription."
+        "The AI prediction is not a confirmed diagnosis. Agricultural information is general guidance, not a treatment prescription."
     )
 
-    st.markdown('<h3 class="subsection-title">Other model predictions</h3>', unsafe_allow_html=True)
-    for item in result.top_predictions[1:]:
-        name = item.class_name.split("___", 1)[-1].replace("_", " ")
-        st.write(f"{name} · {item.confidence:.1%}")
+    if result.top_predictions and len(result.top_predictions) > 1:
+        st.markdown('<h3 class="subsection-title">Model comparison</h3>', unsafe_allow_html=True)
+        for item in result.top_predictions[1:]:
+            name = item.class_name.split("___", 1)[-1].replace("_", " ")
+            st.write(f"{name} · {item.confidence:.1%}")
 
     return st.button("Scan another leaf", type="primary", use_container_width=True, key="scan_another_leaf")
 

@@ -8,7 +8,7 @@ from data.catalog import disease_info_for
 from data.database import initialize_database
 from data.feedback import save_feedback
 from data.history import recent_scans, save_scan
-from services.diagnosis import predict_image
+from services.diagnosis import matches_selected_crop, predict_image
 from services.model import ModelLoadError, load_model
 from ui.layout import apply_styles, render_navigation
 from ui.screens import (
@@ -108,6 +108,10 @@ elif st.session_state.view == "diagnose":
             st.session_state.diagnosis_result,
             st.session_state.diagnosis_crop,
             disease_info_for(st.session_state.diagnosis_result.class_name),
+            crop_mismatch=not matches_selected_crop(
+                st.session_state.diagnosis_result.class_name,
+                st.session_state.diagnosis_crop,
+            ),
         )
         if storage_error or st.session_state.scan_storage_warning:
             st.warning(storage_error or st.session_state.scan_storage_warning)
@@ -151,6 +155,15 @@ elif st.session_state.view == "diagnose":
                 with st.spinner("Analyzing your leaf..."):
                     model = load_model()
                     result = predict_image(model, image, class_names)
+                if not matches_selected_crop(result.class_name, selected_crop):
+                    result = result.__class__(
+                        class_name=result.class_name,
+                        confidence=result.confidence,
+                        confidence_status="low",
+                        top_predictions=result.top_predictions,
+                        second_prediction=result.second_prediction,
+                        confidence_gap=result.confidence_gap,
+                    )
                 st.session_state.diagnosis_result = result
                 st.session_state.diagnosis_crop = selected_crop
                 st.session_state.scan_id = None

@@ -5,10 +5,13 @@ import numpy as np
 from PIL import Image
 
 from config import (
+    CONFIDENCE_GAP_THRESHOLD,
     HIGH_CONFIDENCE_THRESHOLD,
     IMAGE_SIZE,
+    LOW_CONFIDENCE_THRESHOLD,
     MODERATE_CONFIDENCE_THRESHOLD,
 )
+from data.catalog import crop_for_class
 
 
 class PredictionError(RuntimeError):
@@ -27,6 +30,8 @@ class PredictionResult:
     confidence: float
     confidence_status: str
     top_predictions: tuple[RankedPrediction, ...]
+    second_prediction: RankedPrediction | None = None
+    confidence_gap: float = 0.0
 
 
 def prepare_image(
@@ -45,12 +50,18 @@ def prepare_image(
     return np.expand_dims(preprocessed, axis=0)
 
 
-def _confidence_status(confidence: float) -> str:
-    if confidence >= HIGH_CONFIDENCE_THRESHOLD:
-        return "higher"
-    if confidence >= MODERATE_CONFIDENCE_THRESHOLD:
+def _confidence_status(confidence: float, gap: float) -> str:
+    if confidence >= HIGH_CONFIDENCE_THRESHOLD and gap >= CONFIDENCE_GAP_THRESHOLD:
+        return "high"
+    if confidence >= MODERATE_CONFIDENCE_THRESHOLD or gap < CONFIDENCE_GAP_THRESHOLD:
         return "moderate"
-    return "low"
+    if confidence < LOW_CONFIDENCE_THRESHOLD:
+        return "low"
+    return "moderate"
+
+
+def matches_selected_crop(class_name: str, selected_crop: str) -> bool:
+    return crop_for_class(class_name) == selected_crop
 
 
 def predict_image(
@@ -88,10 +99,14 @@ def predict_image(
         for index in ranked_indices
     )
     best = top_predictions[0]
+    second = top_predictions[1] if len(top_predictions) > 1 else None
+    gap = 0.0 if second is None else max(0.0, float(best.confidence - second.confidence))
 
     return PredictionResult(
         class_name=best.class_name,
         confidence=best.confidence,
-        confidence_status=_confidence_status(best.confidence),
+        confidence_status=_confidence_status(best.confidence, gap),
         top_predictions=top_predictions,
+        second_prediction=second,
+        confidence_gap=gap,
     )
