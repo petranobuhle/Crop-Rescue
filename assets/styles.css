@@ -219,6 +219,22 @@ footer {
     font-size: .75rem;
 }
 
+.crop-photo {
+    aspect-ratio: 4 / 3;
+    background: linear-gradient(135deg, #e7eee4, #d5e4d2 58%, #f0e2b9);
+    border-radius: 6px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.crop-photo img {
+    display: block;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    width: 100%;
+}
+
 div[data-testid="stVerticalBlockBorderWrapper"] {
     background: white;
     border-color: var(--line);

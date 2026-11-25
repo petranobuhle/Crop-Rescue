@@ -1,5 +1,13 @@
+# Virtual environments
+.venv/
+
+# Python caches and build artifacts
 __pycache__/
 *.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 data/crop_rescue.db
 data/crop_rescue.db-shm
 data/crop_rescue.db-wal

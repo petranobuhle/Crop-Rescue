@@ -9,15 +9,17 @@ from data.feedback import FEEDBACK_RATINGS
 from data.history import ScanRecord
 from services.diagnosis import PredictionResult
 from services.image_quality import inspect_image
-from ui.layout import hero_background, local_image
+from ui.layout import crop_image_html, hero_background
 
 
+# Crop photos live in the project's top-level images/ folder and are shown
+# at their original quality. Beans has no photo wired in until it is supported.
 CROP_PRESENTATION = {
-    "Maize": ("🌽", "maize.jpg", "A staple crop grown across the region."),
-    "Potato": ("🥔", "potato.jpg", "Check leaves for signs of stress."),
-    "Tomato": ("🍅", "tomato.jpg", "Review visible leaf symptoms."),
+    "Maize": ("🌽", "Maize.webp", "A staple crop grown across the region."),
+    "Potato": ("🥔", "potatoes.avif", "Check leaves for signs of stress."),
+    "Tomato": ("🍅", "tomatoes.webp", "Review visible leaf symptoms."),
     "Cassava": ("🌿", "cassava.jpg", "Check leaf patterns and new growth."),
-    "Beans": ("🫘", "beans.jpg", "Disease support is being prepared."),
+    "Beans": ("🫘", None, "Disease support is being prepared."),
 }
 
 
@@ -73,9 +75,11 @@ def render_crop_selection() -> str | None:
             icon, image_name, description = CROP_PRESENTATION[crop]
             with column:
                 with st.container(border=True):
-                    image = local_image(image_name)
-                    if image:
-                        st.image(image, use_container_width=True)
+                    photo_html = (
+                        crop_image_html(image_name, f"{crop} crop") if image_name else None
+                    )
+                    if photo_html:
+                        st.markdown(photo_html, unsafe_allow_html=True)
                     else:
                         st.markdown(
                             f'<div class="crop-placeholder"><span>{icon}</span>'

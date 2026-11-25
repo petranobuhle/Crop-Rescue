@@ -33,6 +33,44 @@ def _optimized_image(path: str, max_width: int, max_height: int) -> bytes | None
         return None
 
 
+CROP_IMAGE_DIRECTORY = PROJECT_ROOT / "images"
+_IMAGE_MIME_TYPES = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".avif": "image/avif",
+}
+
+
+@st.cache_data(show_spinner=False)
+def _original_image_data_uri(path: str, modified_ns: int) -> str | None:
+    """Embed the file's original bytes unchanged (no re-encoding or resizing)."""
+    mime_type = _IMAGE_MIME_TYPES.get(Path(path).suffix.lower())
+    if mime_type is None:
+        return None
+    try:
+        raw_bytes = Path(path).read_bytes()
+    except OSError:
+        return None
+    return f"data:{mime_type};base64,{base64.b64encode(raw_bytes).decode('ascii')}"
+
+
+def crop_image_html(filename: str, alt_text: str) -> str | None:
+    image_path = CROP_IMAGE_DIRECTORY / filename
+    try:
+        modified_ns = image_path.stat().st_mtime_ns
+    except OSError:
+        return None
+    data_uri = _original_image_data_uri(str(image_path), modified_ns)
+    if data_uri is None:
+        return None
+    return (
+        f'<div class="crop-photo"><img src="{data_uri}" alt="{alt_text}" '
+        'loading="lazy" decoding="async"></div>'
+    )
+
+
 def apply_styles() -> None:
     try:
         modified_ns = STYLE_PATH.stat().st_mtime_ns
